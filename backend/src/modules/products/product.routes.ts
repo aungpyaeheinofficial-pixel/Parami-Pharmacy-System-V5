@@ -154,7 +154,7 @@ productRouter.post('/:id/stock-adjust', async (req, res, next) => {
           create: {
             productId: req.params.id,
             batchNumber: payload.batchNumber,
-            expiryDate: payload.expiryDate ? new Date(payload.expiryDate) : new Date(),
+            expiryDate: payload.expiryDate ? new Date(payload.expiryDate) : new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Default 1 year expiry if not provided
             quantity: payload.quantity,
             costPrice: payload.costPrice ?? 0,
           },
