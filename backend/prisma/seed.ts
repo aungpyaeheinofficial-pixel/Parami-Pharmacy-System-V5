@@ -172,9 +172,9 @@ async function seed() {
   }
 
   const customers = [
-    { id: 'c1', branchId: 'b1', name: 'U Ba Maung', phone: '095123456', points: 1250, tier: 'Gold' },
-    { id: 'c2', branchId: 'b1', name: 'Daw Hla', phone: '097987654', points: 450, tier: 'Silver' },
-    { id: 'c3', branchId: 'b2', name: 'Ko Aung', phone: '092500112', points: 2100, tier: 'Platinum' },
+    { id: 'c1', branchId: '550e8400-e29b-41d4-a716-446655440001', name: 'U Ba Maung', phone: '095123456', points: 1250, tier: 'Gold' },
+    { id: 'c2', branchId: '550e8400-e29b-41d4-a716-446655440001', name: 'Daw Hla', phone: '097987654', points: 450, tier: 'Silver' },
+    { id: 'c3', branchId: '550e8400-e29b-41d4-a716-446655440002', name: 'Ko Aung', phone: '092500112', points: 2100, tier: 'Platinum' },
   ];
 
   for (const customer of customers) {
@@ -186,8 +186,8 @@ async function seed() {
   }
 
   const suppliers = [
-    { id: 's1', branchId: 'b1', name: 'AA Medical', contact: '091234567', email: 'sales@aamedical.com', creditLimit: 1_000_000, outstanding: 300_000 },
-    { id: 's2', branchId: 'b1', name: 'Shwe Mi', contact: '098765432', email: 'info@shwemi.com', creditLimit: 500_000, outstanding: 0 },
+    { id: 's1', branchId: '550e8400-e29b-41d4-a716-446655440001', name: 'AA Medical', contact: '091234567', email: 'sales@aamedical.com', creditLimit: 1_000_000, outstanding: 300_000 },
+    { id: 's2', branchId: '550e8400-e29b-41d4-a716-446655440001', name: 'Shwe Mi', contact: '098765432', email: 'info@shwemi.com', creditLimit: 500_000, outstanding: 0 },
   ];
 
   for (const supplier of suppliers) {
@@ -239,18 +239,18 @@ async function seed() {
 
   await prisma.transaction.createMany({
     data: [
-      { id: 't1', branchId: 'b1', type: TransactionType.INCOME, category: 'Sales', amount: 15_000, date: new Date('2024-03-10'), description: 'Daily sales', paymentMethod: PaymentMethod.CASH },
-      { id: 't2', branchId: 'b1', type: TransactionType.EXPENSE, category: 'Utilities', amount: 50_000, date: new Date('2024-03-08'), description: 'Electricity Bill' },
-      { id: 't3', branchId: 'b2', type: TransactionType.INCOME, category: 'Sales', amount: 25_000, date: new Date('2024-03-11'), description: 'Daily sales', paymentMethod: PaymentMethod.KBZ_PAY },
+      { id: 't1', branchId: '550e8400-e29b-41d4-a716-446655440001', type: TransactionType.INCOME, category: 'Sales', amount: 15_000, date: new Date('2024-03-10'), description: 'Daily sales', paymentMethod: PaymentMethod.CASH },
+      { id: 't2', branchId: '550e8400-e29b-41d4-a716-446655440001', type: TransactionType.EXPENSE, category: 'Utilities', amount: 50_000, date: new Date('2024-03-08'), description: 'Electricity Bill' },
+      { id: 't3', branchId: '550e8400-e29b-41d4-a716-446655440002', type: TransactionType.INCOME, category: 'Sales', amount: 25_000, date: new Date('2024-03-11'), description: 'Daily sales', paymentMethod: PaymentMethod.KBZ_PAY },
     ],
     skipDuplicates: true,
   });
 
   await prisma.expense.createMany({
     data: [
-      { id: 'e1', branchId: 'b1', category: 'Rent', amount: 300_000, date: new Date('2024-03-01'), description: 'Shop rent', status: ExpenseStatus.PAID },
-      { id: 'e2', branchId: 'b1', category: 'Salary', amount: 150_000, date: new Date('2024-03-01'), description: 'Staff salary', status: ExpenseStatus.PAID },
-      { id: 'e3', branchId: 'b1', category: 'Maintenance', amount: 25_000, date: new Date('2024-03-10'), description: 'AC Repair', status: ExpenseStatus.PENDING },
+      { id: 'e1', branchId: '550e8400-e29b-41d4-a716-446655440001', category: 'Rent', amount: 300_000, date: new Date('2024-03-01'), description: 'Shop rent', status: ExpenseStatus.PAID },
+      { id: 'e2', branchId: '550e8400-e29b-41d4-a716-446655440001', category: 'Salary', amount: 150_000, date: new Date('2024-03-01'), description: 'Staff salary', status: ExpenseStatus.PAID },
+      { id: 'e3', branchId: '550e8400-e29b-41d4-a716-446655440001', category: 'Maintenance', amount: 25_000, date: new Date('2024-03-10'), description: 'AC Repair', status: ExpenseStatus.PENDING },
     ],
     skipDuplicates: true,
   });

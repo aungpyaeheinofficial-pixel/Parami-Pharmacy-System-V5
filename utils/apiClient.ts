@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const getHeaders = () => {
   const token = localStorage.getItem('token');
@@ -71,4 +71,3 @@ export const api = {
     return res.json(); // Some DELETEs might return 204 No Content
   },
 };
-
