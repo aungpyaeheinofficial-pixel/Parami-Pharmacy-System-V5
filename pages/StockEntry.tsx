@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Card, Button, Input } from '../components/UI';
 import CameraScanner from '../components/CameraScanner';
-import { useProductStore, useSupplierStore, useAuthStore } from '../store';
+import { useProductStore, useSupplierStore, useAuthStore, useBranchStore } from '../store';
 import { UNIT_TYPES, ScannedItem } from '../types';
 import { parseBarcode } from '../utils/gs1Parser';
 
@@ -217,6 +217,7 @@ const StockEntry = () => {
       } else {
          // Create New Product & Batch (Operation A & B)
          const newId = `p-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+         const branchId = user?.branchId || useBranchStore.getState().currentBranchId || 'b1';
          
          await addProduct({
              id: newId,
@@ -230,7 +231,7 @@ const StockEntry = () => {
              unit: unit,
              minStockLevel: 10,
              requiresPrescription: false,
-             branchId: user?.branchId || 'b1',
+             branchId: branchId,
              location: data.location || '',
              image: '',
              batches: [{
