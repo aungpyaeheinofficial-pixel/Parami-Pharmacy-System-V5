@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { useProductStore } from '../store';
+import { useProductStore, useBranchStore } from '../store';
 import { Card, Button, Badge, ProgressBar, Tabs } from '../components/UI';
 import { AlertTriangle, Calendar, AlertCircle, Clock, Download, ArrowRight, Trash2, Tag, Truck, Image as ImageIcon } from 'lucide-react';
 import { Product, Batch } from '../types';
@@ -14,8 +14,16 @@ interface ExpiryItem {
 
 const Expiry = () => {
   // Ensure we use the live products from the store
-  const { products, removeBatchStock } = useProductStore();
+  const { products, removeBatchStock, syncWithBranch } = useProductStore();
+  const { currentBranchId } = useBranchStore();
   const [activeTab, setActiveTab] = useState('CRITICAL');
+
+  // Force refresh on mount
+  React.useEffect(() => {
+      if (currentBranchId) {
+          syncWithBranch(currentBranchId);
+      }
+  }, [currentBranchId]);
 
   // Calculate expiry data
   const expiryItems: ExpiryItem[] = useMemo(() => {
@@ -203,7 +211,7 @@ const Expiry = () => {
                            <span className="bg-slate-100 px-1.5 rounded text-xs">#{item.batch.batchNumber}</span>
                         </div>
                         <div className="text-xs text-slate-500">
-                          Expires: <span className="font-medium">{item.batch.expiryDate}</span>
+                          Expires: <span className="font-medium">{new Date(item.batch.expiryDate).toLocaleDateString()}</span>
                         </div>
                         <div className="text-xs text-slate-500">
                           Qty: <span className="font-medium">{item.batch.quantity}</span> units
