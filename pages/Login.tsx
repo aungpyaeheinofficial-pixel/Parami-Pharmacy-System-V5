@@ -14,16 +14,22 @@ const Login = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
-      login(email);
-      
-      // Auto-select branch if user is restricted
-      const user = useAuthStore.getState().user;
-      if (user?.branchId) {
-          useBranchStore.getState().setBranch(user.branchId);
+    setTimeout(async () => {
+      try {
+        await login(email, password);
+        
+        // Auto-select branch if user is restricted
+        const user = useAuthStore.getState().user;
+        if (user?.branchId) {
+            useBranchStore.getState().setBranch(user.branchId);
+        }
+        
+        navigate('/');
+      } catch (e) {
+        alert("Login failed: " + e);
+      } finally {
+        setLoading(false);
       }
-      
-      navigate('/');
     }, 800);
   };
 

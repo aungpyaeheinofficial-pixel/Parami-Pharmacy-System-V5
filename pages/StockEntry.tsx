@@ -185,7 +185,7 @@ const StockEntry = () => {
       }
   };
 
-  const saveStockEntry = (data: any) => {
+  const saveStockEntry = async (data: any) => {
        // IMPORTANT: Fetch latest state directly to ensure bulk imports see previous iterations' new products
        const currentProducts = useProductStore.getState().allProducts;
        
@@ -205,7 +205,7 @@ const StockEntry = () => {
        
        if (product) {
           // Operation A & B: Update Inventory & Batch
-          incrementStock(
+          await incrementStock(
               product.id,
               data.batchNumber,
               qty,
@@ -218,7 +218,7 @@ const StockEntry = () => {
          // Create New Product & Batch (Operation A & B)
          const newId = `p-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
          
-         addProduct({
+         await addProduct({
              id: newId,
              nameEn: data.productName,
              nameMm: data.productName, 
@@ -245,32 +245,36 @@ const StockEntry = () => {
   };
 
   // --- SINGLE ENTRY HANDLERS ---
-  const handleSingleSave = (createAnother: boolean = false) => {
+  const handleSingleSave = async (createAnother: boolean = false) => {
       if (!formData.productName || !formData.quantity || !formData.unit) {
           alert("Please fill in Product Name, Quantity, and Unit.");
           return;
       }
 
-      saveStockEntry(formData);
+      try {
+          await saveStockEntry(formData);
+          
+          setSuccessMsg(`Stock Updated: ${formData.quantity} ${formData.unit} of ${formData.productName}`);
+          setTimeout(() => setSuccessMsg(''), 3000);
 
-      setSuccessMsg(`Stock Updated: ${formData.quantity} ${formData.unit} of ${formData.productName}`);
-      setTimeout(() => setSuccessMsg(''), 3000);
-
-      if (createAnother) {
-          setFormData(prev => ({
-              ...prev,
-              gtin: '',
-              productName: '',
-              category: '',
-              batchNumber: '',
-              expiryDate: '',
-              quantity: '',
-              costPrice: '',
-              sellingPrice: ''
-          }));
-          setSearchTerm('');
-      } else {
-          navigate('/inventory');
+          if (createAnother) {
+              setFormData(prev => ({
+                  ...prev,
+                  gtin: '',
+                  productName: '',
+                  category: '',
+                  batchNumber: '',
+                  expiryDate: '',
+                  quantity: '',
+                  costPrice: '',
+                  sellingPrice: ''
+              }));
+              setSearchTerm('');
+          } else {
+              navigate('/inventory');
+          }
+      } catch (e) {
+          alert("Failed to save: " + e);
       }
   };
 
@@ -377,34 +381,33 @@ const StockEntry = () => {
 
       setIsProcessing(true);
       
-      setTimeout(() => {
+      setTimeout(async () => {
           try {
               let importCount = 0;
-              validRows.forEach(row => {
-                  // Only process rows that have minimal viable data
-                  if (row.productName && row.quantity && row.gtin) {
-                      saveStockEntry({
-                          gtin: row.gtin,
-                          productName: row.productName,
-                          category: row.category,
-                          batchNumber: row.batchNumber,
-                          expiryDate: row.expiryDate,
-                          quantity: row.quantity,
-                          unit: row.unit,
-                          costPrice: row.costPrice,
-                          sellingPrice: row.sellingPrice,
-                          location: ''
-                      });
-                      importCount++;
-                  }
-              });
+              const validDataRows = validRows.filter(row => row.productName && row.quantity && row.gtin);
+              
+              for (const row of validDataRows) {
+                  await saveStockEntry({
+                      gtin: row.gtin,
+                      productName: row.productName,
+                      category: row.category,
+                      batchNumber: row.batchNumber,
+                      expiryDate: row.expiryDate,
+                      quantity: row.quantity,
+                      unit: row.unit,
+                      costPrice: row.costPrice,
+                      sellingPrice: row.sellingPrice,
+                      location: ''
+                  });
+                  importCount++;
+              }
 
               setSuccessMsg(`Stock Updated for ${importCount} items!`);
               setGridData([]);
               addEmptyRows(1);
           } catch (e) {
               console.error(e);
-              alert("Error processing import.");
+              alert("Error processing import: " + e);
           } finally {
               setIsProcessing(false);
           }

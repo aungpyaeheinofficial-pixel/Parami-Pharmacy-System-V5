@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { 
@@ -11,6 +10,7 @@ import {
   mockDistributionOrders, mockPurchaseOrders, mockExpenses, mockPayables, mockReceivables, mockSuppliers 
 } from './data';
 import { GS1ParsedData } from './utils/gs1Parser';
+import { api } from './utils/apiClient';
 
 // --- Shared Helper for Persistence ---
 const getInitialBranchId = () => {
@@ -141,7 +141,7 @@ export const useBranchStore = create<BranchState>((set, get) => ({
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string) => void;
+  login: (email: string, password?: string) => Promise<void>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
 }
@@ -149,11 +149,26 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null, 
   isAuthenticated: false,
-  login: (email: string) => {
-    const user = mockUsers.find(u => u.email === email) || mockUsers[0];
-    set({ user, isAuthenticated: true });
+  login: async (email: string, password?: string) => {
+    try {
+       if (password) {
+          const { token, user } = await api.post('/auth/login', { email, password });
+          localStorage.setItem('token', token);
+          set({ user, isAuthenticated: true });
+       } else {
+          // Legacy mock fallback
+          const user = mockUsers.find(u => u.email === email) || mockUsers[0];
+          set({ user, isAuthenticated: true });
+       }
+    } catch (e) {
+       console.error("Login failed", e);
+       throw e;
+    }
   },
-  logout: () => set({ user: null, isAuthenticated: false }),
+  logout: () => {
+    localStorage.removeItem('token');
+    set({ user: null, isAuthenticated: false });
+  },
   updateUser: (updates) => set((state) => ({
     user: state.user ? { ...state.user, ...updates } : null
   })),
@@ -239,139 +254,112 @@ export const useGlobalStore = create<GlobalState>((set) => ({
 interface ProductState {
   allProducts: Product[]; // Master DB
   products: Product[];    // Filtered View
-  syncWithBranch: (branchId: string) => void;
+  syncWithBranch: (branchId: string) => Promise<void>;
   setProducts: (products: Product[]) => void;
-  addProduct: (product: Product) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  incrementStock: (id: string, batchNumber: string | null, quantity: number, unit?: string, location?: string, expiryDate?: string, costPrice?: number) => void;
-  removeBatchStock: (productId: string, batchNumber: string, quantity: number, reason?: string) => void;
+  addProduct: (product: Product) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  incrementStock: (id: string, batchNumber: string | null, quantity: number, unit?: string, location?: string, expiryDate?: string, costPrice?: number) => Promise<void>;
+  removeBatchStock: (productId: string, batchNumber: string, quantity: number, reason?: string) => Promise<void>;
 }
 
 export const useProductStore = create<ProductState>((set, get) => ({
-  allProducts: mockProducts,
-  products: mockProducts.filter(p => p.branchId === initialBranchId), // Init with persisted branch
+  allProducts: [],
+  products: [], 
   
-  syncWithBranch: (branchId) => {
-    set(state => ({
-      products: state.allProducts.filter(p => p.branchId === branchId)
-    }));
+  syncWithBranch: async (branchId) => {
+    try {
+        const { products } = await api.get(`/products?branchId=${branchId}`);
+        const mappedProducts = products.map((p: any) => ({
+            ...p,
+            image: p.imageUrl || '',
+        }));
+        set({ 
+            allProducts: mappedProducts, 
+            products: mappedProducts
+        });
+    } catch (e) {
+        console.error("Failed to fetch products", e);
+    }
   },
 
   setProducts: (products) => set({ products }),
   
-  addProduct: (product) => {
-    const currentBranchId = useBranchStore.getState().currentBranchId;
-    const newProduct = { ...product, branchId: currentBranchId };
-    set((state) => ({ 
-      allProducts: [newProduct, ...state.allProducts],
-      products: [newProduct, ...state.products] 
-    }));
+  addProduct: async (product) => {
+    try {
+        const payload = {
+            ...product,
+            imageUrl: product.image || undefined,
+        };
+        const { product: newProduct } = await api.post('/products', payload);
+        const mappedProduct = {
+            ...newProduct,
+            image: newProduct.imageUrl || ''
+        };
+        set((state) => ({ 
+          allProducts: [mappedProduct, ...state.allProducts],
+          products: [mappedProduct, ...state.products] 
+        }));
+    } catch (e) {
+        console.error("Failed to add product", e);
+        throw e;
+    }
   },
   
-  updateProduct: (id, updates) => set((state) => {
-    const updatedAll = state.allProducts.map((p) => (p.id === id ? { ...p, ...updates } : p));
-    const currentBranchId = useBranchStore.getState().currentBranchId;
-    return {
-      allProducts: updatedAll,
-      products: updatedAll.filter(p => p.branchId === currentBranchId)
-    };
-  }),
+  updateProduct: async (id, updates) => {
+    try {
+       await api.patch(`/products/${id}`, updates);
+       const currentBranchId = useBranchStore.getState().currentBranchId;
+       await get().syncWithBranch(currentBranchId);
+    } catch (e) {
+       console.error("Failed to update product", e);
+       throw e;
+    }
+  },
   
-  deleteProduct: (id) => set((state) => {
-     const updatedAll = state.allProducts.filter((p) => p.id !== id);
-     const currentBranchId = useBranchStore.getState().currentBranchId;
-     return {
-        allProducts: updatedAll,
-        products: updatedAll.filter(p => p.branchId === currentBranchId)
-     };
-  }),
+  deleteProduct: async (id) => {
+     try {
+       await api.delete(`/products/${id}`);
+       const currentBranchId = useBranchStore.getState().currentBranchId;
+       await get().syncWithBranch(currentBranchId);
+     } catch (e) {
+       console.error("Failed to delete product", e);
+       throw e;
+     }
+  },
 
-  // Used by Stock Entry & Scanner
-  incrementStock: (id, batchNumber, quantity, unit, location, expiryDate, costPrice) => set((state) => {
-    const currentBranchId = useBranchStore.getState().currentBranchId;
-    
-    const updatedAll = state.allProducts.map(p => {
-        if (p.id === id) {
-            let updatedBatches = [...p.batches];
-            // If batch provided, try to find and update it
-            if (batchNumber) {
-                const batchIndex = updatedBatches.findIndex(b => b.batchNumber === batchNumber);
-                if (batchIndex >= 0) {
-                    updatedBatches[batchIndex] = {
-                        ...updatedBatches[batchIndex],
-                        quantity: updatedBatches[batchIndex].quantity + quantity
-                    };
-                } else {
-                    // Create new batch with passed expiry and cost
-                    updatedBatches.push({
-                        id: `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Use robust ID to prevent collision
-                        batchNumber: batchNumber,
-                        quantity: quantity,
-                        expiryDate: expiryDate || new Date(Date.now() + 31536000000).toISOString().split('T')[0], // Default 1 year if not provided
-                        costPrice: costPrice || 0
-                    });
-                }
-            } else {
-               // No batch info, just update main stock (or default batch)
-               if (updatedBatches.length > 0) {
-                   updatedBatches[0].quantity += quantity;
-               }
-            }
-            
-            return {
-                ...p,
-                stockLevel: p.stockLevel + quantity,
-                batches: updatedBatches,
-                location: location || p.location, // Update location if provided
-                unit: unit || p.unit // Update unit if provided
-            };
-        }
-        return p;
-    });
+  incrementStock: async (id, batchNumber, quantity, unit, location, expiryDate, costPrice) => {
+     try {
+       await api.post(`/products/${id}/stock-adjust`, {
+           quantity,
+           batchNumber,
+           expiryDate,
+           costPrice,
+           location,
+           unit
+       });
+       
+       const currentBranchId = useBranchStore.getState().currentBranchId;
+       await get().syncWithBranch(currentBranchId);
+     } catch (e) {
+       console.error("Failed to increment stock", e);
+       throw e;
+     }
+  },
 
-    return {
-        allProducts: updatedAll,
-        products: updatedAll.filter(p => p.branchId === currentBranchId)
-    };
-  }),
-
-  // Used by Expiry Center for Write-offs/Returns
-  removeBatchStock: (productId, batchNumber, quantity, reason) => set((state) => {
-    const currentBranchId = useBranchStore.getState().currentBranchId;
-    
-    const updatedAll = state.allProducts.map(p => {
-        if (p.id === productId) {
-            let updatedBatches = [...p.batches];
-            const batchIndex = updatedBatches.findIndex(b => b.batchNumber === batchNumber);
-            
-            if (batchIndex >= 0) {
-                const currentQty = updatedBatches[batchIndex].quantity;
-                const newQty = Math.max(0, currentQty - quantity);
-                
-                if (newQty === 0) {
-                    // Option: Remove batch entirely or keep with 0?
-                    // Let's keep it with 0 for record tracking for now, or filter in view
-                    updatedBatches[batchIndex].quantity = 0;
-                } else {
-                    updatedBatches[batchIndex].quantity = newQty;
-                }
-                
-                return {
-                    ...p,
-                    stockLevel: Math.max(0, p.stockLevel - quantity),
-                    batches: updatedBatches
-                };
-            }
-        }
-        return p;
-    });
-
-    return {
-        allProducts: updatedAll,
-        products: updatedAll.filter(p => p.branchId === currentBranchId)
-    };
-  })
+  removeBatchStock: async (productId, batchNumber, quantity, reason) => {
+     try {
+       await api.post(`/products/${productId}/stock-adjust`, {
+           quantity: -quantity,
+           batchNumber,
+       });
+       const currentBranchId = useBranchStore.getState().currentBranchId;
+       await get().syncWithBranch(currentBranchId);
+     } catch (e) {
+       console.error("Failed to remove stock", e);
+       throw e;
+     }
+  }
 }));
 
 // --- Scanner History Store & Sync Logic (Persisted) ---
@@ -448,7 +436,7 @@ export const useScannerStore = create<ScannerState>()(
 
                 if (product) {
                     // Update Inventory
-                    productStore.incrementStock(
+                    await productStore.incrementStock(
                         product.id, 
                         verifiedItem.batchNumber, 
                         verifiedItem.quantity,

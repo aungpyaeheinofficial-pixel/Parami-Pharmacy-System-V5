@@ -28,14 +28,29 @@ const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, classNam
 
     const initScanner = async () => {
       try {
+        // Security Check for Non-Localhost
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            throw new Error("Camera requires HTTPS. Please enable SSL or use localhost.");
+        }
+
         const Html5Qrcode = (window as any).Html5Qrcode;
+        if (!Html5Qrcode) {
+             throw new Error("Scanner library missing.");
+        }
+
+        // Ensure element exists before starting
+        if (!document.getElementById(scannerId.current)) {
+            console.warn("Scanner mount point missing");
+            return;
+        }
+
         const html5QrCode = new Html5Qrcode(scannerId.current);
         scannerRef.current = html5QrCode;
 
         // Config optimized for GS1 DataMatrix
         const config = { 
             fps: 15, 
-            qrbox: { width: 300, height: 300 }, // Larger box for density
+            qrbox: { width: 300, height: 300 }, 
             aspectRatio: 1.0,
             disableFlip: false,
         };
@@ -45,16 +60,15 @@ const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, classNam
           config,
           (decodedText: string) => {
              if (isMounted.current) {
-                // Throttle/Debounce could go here
                 onScan(decodedText);
              }
           },
-          () => {} // Ignore per-frame errors
+          () => {} 
         );
-      } catch (err) {
+      } catch (err: any) {
         console.error("Scanner Error:", err);
         if (isMounted.current) {
-            setError("Could not access camera. Ensure permissions are granted.");
+            setError(err.message || "Could not access camera. Ensure permissions are granted and you are using HTTPS.");
         }
       }
     };
@@ -64,12 +78,15 @@ const CameraScanner: React.FC<CameraScannerProps> = ({ onScan, onClose, classNam
     return () => {
       isMounted.current = false;
       clearTimeout(timer);
-      if (scannerRef.current) {
-         scannerRef.current.stop().then(() => {
-             scannerRef.current.clear();
+      
+      const scanner = scannerRef.current;
+      if (scanner) {
+         // Prevent crash during unmount
+         scanner.stop().then(() => {
+             try { scanner.clear(); } catch (e) { /* ignore cleanup errors */ }
          }).catch((err: any) => {
              console.warn("Scanner stop failed", err);
-             scannerRef.current.clear();
+             try { scanner.clear(); } catch (e) { /* ignore cleanup errors */ }
          });
       }
     };
