@@ -1,15 +1,16 @@
 
 import React, { useState, useMemo } from 'react';
 import { Button, Input, Badge } from '../components/UI';
-import { useDistributionStore, useProductStore, useCustomerStore } from '../store';
+import { useDistributionStore, useProductStore, useCustomerStore, useBranchStore } from '../store';
 import { DistributionOrder, DistributionItem } from '../types';
 import { Truck, MapPin, Package, Clock, Search, Filter, Plus, X, Trash2, Save, Calendar, DollarSign, CreditCard, ShoppingBag, ChevronRight, Minus, Store, User, ChevronDown, AlertCircle } from 'lucide-react';
 
 const Distribution = () => {
   // Use store
-  const { orders, addOrder, updateOrder, deleteOrder } = useDistributionStore();
+  const { orders, addOrder, updateOrder, deleteOrder, syncWithBranch: syncDistribution } = useDistributionStore();
   const { products } = useProductStore();
   const { customers } = useCustomerStore();
+  const { currentBranchId } = useBranchStore();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,6 +29,13 @@ const Distribution = () => {
     itemsList: [],
     branchId: ''
   });
+
+  // Load orders for current branch on mount / branch change
+  React.useEffect(() => {
+    if (currentBranchId) {
+      syncDistribution(currentBranchId);
+    }
+  }, [currentBranchId, syncDistribution]);
 
   // Validation State
   const [errors, setErrors] = useState<{customer?: string, address?: string, items?: string}>({});

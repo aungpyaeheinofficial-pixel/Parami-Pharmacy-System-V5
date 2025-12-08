@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Input, Badge } from '../components/UI';
-import { useFinanceStore, useTransactionStore } from '../store';
+import { useFinanceStore, useTransactionStore, useBranchStore } from '../store';
 import { 
   ArrowUpRight, ArrowDownRight, DollarSign, TrendingUp, Calendar, 
   CreditCard, Wallet, Plus, CheckCircle2, 
@@ -57,13 +57,31 @@ const Finance = () => {
   const [transactionFilter, setTransactionFilter] = useState<'ALL' | 'INCOME' | 'EXPENSE'>('ALL');
   
   // Use stores
-  const { transactions } = useTransactionStore();
-  const { expenses, payables, receivables, addExpense, removeExpense, markPayablePaid, markReceivableCollected } = useFinanceStore();
+  const { transactions, syncWithBranch: syncTransactions } = useTransactionStore();
+  const { 
+    expenses, 
+    payables, 
+    receivables, 
+    addExpense, 
+    removeExpense, 
+    markPayablePaid, 
+    markReceivableCollected,
+    syncWithBranch: syncFinance,
+  } = useFinanceStore();
+  const { currentBranchId } = useBranchStore();
 
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [newExpense, setNewExpense] = useState<Partial<Expense>>({
     category: 'Utilities', amount: 0, date: new Date().toISOString().split('T')[0], description: '', status: 'PENDING'
   });
+
+  // Load finance data for current branch
+  useEffect(() => {
+    if (currentBranchId) {
+      syncTransactions(currentBranchId);
+      syncFinance(currentBranchId);
+    }
+  }, [currentBranchId, syncTransactions, syncFinance]);
 
   const handleAddExpense = () => {
     if(!newExpense.amount || !newExpense.description) return;

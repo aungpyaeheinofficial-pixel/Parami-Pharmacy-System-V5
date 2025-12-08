@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, Button, Badge, Input } from '../components/UI';
-import { usePurchaseStore, useSupplierStore, useProductStore } from '../store';
+import { usePurchaseStore, useSupplierStore, useProductStore, useBranchStore } from '../store';
 import { PurchaseOrder, Supplier } from '../types';
 import { ShoppingBag, Plus, Phone, Mail, FileText, Download, Edit2, Trash2, X, Save, Minus, CheckCircle, Clock, Truck, CreditCard, Banknote, Search, AlertCircle, Loader2, Check, Calendar, ChevronDown, Store } from 'lucide-react';
 
@@ -15,9 +15,10 @@ interface PurchaseItem {
 
 const Purchase = () => {
   // Use stores
-  const { purchaseOrders, addPO, updatePO, deletePO } = usePurchaseStore();
-  const { suppliers, addSupplier, updateSupplier, deleteSupplier } = useSupplierStore();
+  const { purchaseOrders, addPO, updatePO, deletePO, syncWithBranch: syncPurchase } = usePurchaseStore();
+  const { suppliers, addSupplier, updateSupplier, deleteSupplier, syncWithBranch: syncSuppliers } = useSupplierStore();
   const { products } = useProductStore();
+  const { currentBranchId } = useBranchStore();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
@@ -54,6 +55,14 @@ const Purchase = () => {
     outstanding: 0,
     branchId: ''
   });
+
+  // Initial data load for current branch
+  React.useEffect(() => {
+    if (currentBranchId) {
+      syncPurchase(currentBranchId);
+      syncSuppliers(currentBranchId);
+    }
+  }, [currentBranchId, syncPurchase, syncSuppliers]);
 
   // --- Helpers ---
   const calculateTotal = (items: PurchaseItem[]) => {

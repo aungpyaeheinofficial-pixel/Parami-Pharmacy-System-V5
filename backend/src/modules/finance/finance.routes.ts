@@ -92,6 +92,17 @@ financeRouter.post('/expenses', async (req, res, next) => {
   }
 });
 
+financeRouter.delete('/expenses/:id', async (req, res, next) => {
+  try {
+    await prisma.expense.delete({
+      where: { id: req.params.id },
+    });
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 financeRouter.get('/payables', async (req, res, next) => {
   try {
     const { branchId } = req.query;
@@ -126,6 +137,17 @@ financeRouter.post('/payables', async (req, res, next) => {
   }
 });
 
+financeRouter.delete('/payables/:id', async (req, res, next) => {
+  try {
+    await prisma.payable.delete({
+      where: { id: req.params.id },
+    });
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 financeRouter.get('/receivables', async (req, res, next) => {
   try {
     const { branchId } = req.query;
@@ -153,6 +175,17 @@ financeRouter.post('/receivables', async (req, res, next) => {
       },
     });
     res.status(201).json({ receivable });
+  } catch (error) {
+    next(error);
+  }
+});
+
+financeRouter.delete('/receivables/:id', async (req, res, next) => {
+  try {
+    await prisma.receivable.delete({
+      where: { id: req.params.id },
+    });
+    res.status(204).send();
   } catch (error) {
     next(error);
   }

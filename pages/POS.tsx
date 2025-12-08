@@ -60,7 +60,7 @@ const POS = () => {
   const { items, addItem, removeItem, updateQuantity, total, clearCart, customer, setCustomer } = useCartStore();
   const { products, addProduct, syncWithBranch } = useProductStore();
   const { customers } = useCustomerStore();
-  const { addTransaction } = useTransactionStore();
+  const { syncWithBranch: syncTransactions } = useTransactionStore();
   const { currentBranchId } = useBranchStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -284,9 +284,10 @@ const POS = () => {
 
       await api.post('/sales/checkout', payload);
 
-      // Refresh stock from backend
+      // Refresh stock & finance metrics from backend
       if (currentBranchId) {
         await syncWithBranch(currentBranchId);
+        await syncTransactions(currentBranchId);
       }
 
       setPaymentModalOpen(false);

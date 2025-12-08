@@ -102,3 +102,23 @@ distributionRouter.post('/:id/status', async (req, res, next) => {
   }
 });
 
+distributionRouter.delete('/:id', async (req, res, next) => {
+  try {
+    const existing = await prisma.distributionOrder.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!existing) {
+      throw createError(404, 'Order not found');
+    }
+
+    await prisma.distributionOrder.delete({
+      where: { id: req.params.id },
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+

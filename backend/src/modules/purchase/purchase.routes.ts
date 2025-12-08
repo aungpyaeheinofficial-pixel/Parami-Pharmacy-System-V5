@@ -85,3 +85,23 @@ purchaseRouter.patch('/:id', async (req, res, next) => {
   }
 });
 
+purchaseRouter.delete('/:id', async (req, res, next) => {
+  try {
+    const existing = await prisma.purchaseOrder.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!existing) {
+      throw createError(404, 'Purchase order not found');
+    }
+
+    await prisma.purchaseOrder.delete({
+      where: { id: req.params.id },
+    });
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+

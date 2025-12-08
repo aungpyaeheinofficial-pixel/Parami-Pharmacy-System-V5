@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { TrendingUp, Users, AlertTriangle, ArrowUpRight, ArrowDownRight, Calendar, Filter, RefreshCw, ShoppingCart, Activity, Package } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button } from '../components/UI';
-import { useProductStore, useTransactionStore, useCustomerStore, useDistributionStore } from '../store';
+import { useProductStore, useTransactionStore, useCustomerStore, useDistributionStore, useBranchStore } from '../store';
 import { Transaction, DistributionOrder } from '../types';
 
 interface DashboardMetrics {
@@ -102,10 +102,11 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   // Connect to Real Stores
-  const { products } = useProductStore();
-  const { customers } = useCustomerStore();
-  const { transactions } = useTransactionStore();
-  const { orders } = useDistributionStore();
+  const { products, syncWithBranch: syncProducts } = useProductStore();
+  const { customers, syncWithBranch: syncCustomers } = useCustomerStore();
+  const { transactions, syncWithBranch: syncTransactions } = useTransactionStore();
+  const { orders, syncWithBranch: syncDistribution } = useDistributionStore();
+  const { currentBranchId } = useBranchStore();
 
   const [filterType, setFilterType] = useState<'Today' | 'Week' | 'Month' | 'Year'>('Month');
   const [loading, setLoading] = useState(false);
@@ -120,6 +121,16 @@ const Dashboard = () => {
     chartData: [],
     categoryData: []
   });
+
+  // Load core data for current branch
+  useEffect(() => {
+    if (currentBranchId) {
+      syncProducts(currentBranchId);
+      syncCustomers(currentBranchId);
+      syncTransactions(currentBranchId);
+      syncDistribution(currentBranchId);
+    }
+  }, [currentBranchId, syncProducts, syncCustomers, syncTransactions, syncDistribution]);
 
   const calculateMetrics = () => {
     setLoading(true);

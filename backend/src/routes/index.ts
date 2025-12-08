@@ -10,6 +10,7 @@ import { purchaseRouter } from '../modules/purchase/purchase.routes';
 import { salesRouter } from '../modules/sales/sales.routes';
 import { scannerRouter } from '../modules/scanner/scanner.routes';
 import { settingsRouter } from '../modules/settings/settings.routes';
+import { supplierRouter } from '../modules/suppliers/supplier.routes';
 
 export const router = Router();
 
@@ -24,4 +25,5 @@ router.use('/purchase', purchaseRouter);
 router.use('/finance', financeRouter);
 router.use('/settings', settingsRouter);
 router.use('/scanner', scannerRouter);
+router.use('/suppliers', supplierRouter);
 
