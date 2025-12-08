@@ -6,7 +6,8 @@ import { createError } from '../../lib/http-error';
 import { requireAuth } from '../../middleware/auth';
 
 const purchaseItemSchema = z.object({
-  productId: z.string().uuid().optional(),
+  // Allow legacy non-UUID product IDs (e.g. p1) by relaxing validation
+  productId: z.string().min(1).optional(),
   name: z.string().min(2),
   quantity: z.number().int().positive(),
   unitCost: z.number().int().nonnegative(),
@@ -14,7 +15,8 @@ const purchaseItemSchema = z.object({
 
 const purchaseSchema = z.object({
   branchId: z.string().uuid(),
-  supplierId: z.string().uuid(),
+  // Allow legacy non-UUID supplier IDs (e.g. s1) from existing data
+  supplierId: z.string().min(1),
   status: z.nativeEnum(PurchaseStatus).default(PurchaseStatus.PENDING),
   paymentType: z.nativeEnum(PaymentMethod).default(PaymentMethod.CASH),
   date: z.string().optional(),

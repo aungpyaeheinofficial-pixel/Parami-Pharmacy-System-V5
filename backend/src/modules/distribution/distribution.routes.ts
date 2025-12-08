@@ -6,7 +6,8 @@ import { createError } from '../../lib/http-error';
 import { requireAuth } from '../../middleware/auth';
 
 const distributionItemSchema = z.object({
-  productId: z.string().uuid().optional(),
+  // Allow legacy non-UUID product IDs (e.g. p1) by relaxing validation
+  productId: z.string().min(1).optional(),
   name: z.string().min(2),
   quantity: z.number().int().positive(),
   price: z.number().int().nonnegative(),
